@@ -29,6 +29,7 @@ struct Node {
     Data data;
     Color color;
     bool nill;
+    int size;
 
     Node* left;
     Node* right;
@@ -50,6 +51,9 @@ struct Node {
 
     void rotateLeft();
     void rotateRight();
+
+    void incSize();
+    void recalcSize();
 };
 
 class RedBlackTree {

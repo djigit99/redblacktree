@@ -13,6 +13,7 @@ void RedBlackTree::addNode(Node *node) {
         Node* curNode = root;
         while (!curNode->isNill()) {
             if (curNode->data > node->data) {
+                curNode->incSize();
                 if (curNode->left->isNill()) {
                     delete curNode->left;
                     curNode->left = node;
@@ -22,6 +23,7 @@ void RedBlackTree::addNode(Node *node) {
                     curNode = curNode->left;
                 }
             } else if (curNode->data < node->data) {
+                curNode->incSize();
                 if (curNode->right->isNill()) {
                     delete curNode->right;
                     curNode->right = node;
@@ -63,26 +65,39 @@ void RedBlackTree::addNode(Node *node) {
                 tmpNode->parent->setcolor(BLACK);
                 tmpNode->parent->parent->setcolor(RED);
                 tmpNode->parent->parent->rotateRight();
+                tmpNode->parent->right->recalcSize();
+                tmpNode->parent->recalcSize();
             } else if (tmpNode->isRightChild() && tmpNode->parent->isLeftChild()) {
                 tmpNode->setcolor(BLACK);
                 tmpNode->parent->parent->setcolor(RED);
                 tmpNode->parent->rotateLeft();
                 tmpNode->parent->rotateRight();
+                tmpNode->left->recalcSize();
+                tmpNode->right->recalcSize();
+                tmpNode->recalcSize();
             } else if (tmpNode->isRightChild() && tmpNode->parent->isRightChild()) {
                 tmpNode->parent->setcolor(BLACK);
                 tmpNode->parent->parent->setcolor(RED);
                 tmpNode->parent->parent->rotateLeft();
+                tmpNode->parent->left->recalcSize();
+                tmpNode->parent->recalcSize();
             } else if (tmpNode->isLeftChild() && tmpNode->parent->isRightChild()) {
                 tmpNode->setcolor(BLACK);
                 tmpNode->parent->parent->setcolor(RED);
                 tmpNode->parent->rotateRight();
                 tmpNode->parent->rotateLeft();
+                tmpNode->left->recalcSize();
+                tmpNode->right->recalcSize();
+                tmpNode->recalcSize();
             }
         }
     }
     if (tmpNode->isRoot()) {
         tmpNode->setcolor(BLACK);
         root = tmpNode;
+    }
+    if (tmpNode->parent && tmpNode->parent->isRoot()) {
+        root = tmpNode->parent;
     }
 }
 
@@ -112,6 +127,7 @@ void RedBlackTree::addNode(const Data &data) {
     node->right = new Node(node);
 
     node->left->nill = node->right->nill = true;
+    node->left->size = node->right->size = 0;
 
     node->left->setcolor(BLACK);
     node->right->setcolor(BLACK);
@@ -168,6 +184,9 @@ void RedBlackTree::fixDeletion(Node *deletedNode) {
     // Case 2: if either u or v is Red
     if (deletedNode->getColor() == RED || u->getColor() == RED) {
         u->setcolor(BLACK);
+        if (u->isRoot()) {
+            root = u;
+        }
     }
     // Case 3: If Both u and v are Black
     else {
@@ -178,7 +197,7 @@ void RedBlackTree::fixDeletion(Node *deletedNode) {
                 s = u->parent->left;
             // Case A: If sibling s is black and at least one of sibling’s children is red
             if (s->getColor() == BLACK &&
-                    (s->left->getColor() == RED || s->right->getColor() == RED) ) {
+                    (s->left && s->left->getColor() == RED || s->right && s->right->getColor() == RED) ) {
                 Node* r;
                 if (s->left->getColor() == RED) {
                     r = s->left;
@@ -198,9 +217,13 @@ void RedBlackTree::fixDeletion(Node *deletedNode) {
                     s->rotateRight();
                     r->parent->rotateLeft();
                 }
+                if (u->parent->parent->isRoot()) {
+                    root = u->parent->parent;
+                }
             }
             // Case B: If sibling is black and its both children are black
-            else if (s->getColor() == BLACK && !(s->left->getColor() == RED || s->right->getColor() == RED)) {
+            else if (s->getColor() == BLACK &&
+                     !(s->left && s->left->getColor() == RED || s->right && s->right->getColor() == RED)) {
                 s->setcolor(RED);
                 u->setcolor(BLACK);
                 if (u->parent->getColor() == BLACK) {
@@ -213,11 +236,14 @@ void RedBlackTree::fixDeletion(Node *deletedNode) {
             // Case C: If sibling is red
             else if (s->getColor() == RED) {
                 s->setcolor(BLACK);
-                s->parent->setcolor(RED);
+                u->parent->setcolor(RED);
                 if (s->isLeftChild()) {
                     s->parent->rotateRight();
                 } else if (s->isRightChild()) {
                     s->parent->rotateLeft();
+                }
+                if (s->isRoot()) {
+                    root = s;
                 }
             }
 
@@ -252,6 +278,7 @@ Node::Node() {
     left = right = parent = nullptr;
     color = RED;
     nill = false;
+    size = 1;
 }
 
 Node::Node(Node *nparent) {
@@ -259,6 +286,7 @@ Node::Node(Node *nparent) {
     this->parent = nparent;
     color = RED;
     nill = false;
+    size = 1;
 }
 
 Node::Node(const Data &data, Node* nparent) {
@@ -268,6 +296,7 @@ Node::Node(const Data &data, Node* nparent) {
     this->data = data;
     color = RED;
     nill = false;
+    size = 1;
 }
 
 void Node::setcolor(const Color & ncolor) {
@@ -312,9 +341,9 @@ void Node::rotateLeft() {
 
         // connect parent with right
         tmpRight->parent = parent;
-        if (isLeftChild() ) {
+        if (parent && isLeftChild() ) {
             parent->left = tmpRight;
-        } else if (isRightChild() ) {
+        } else if (parent && isRightChild() ) {
             parent->right = tmpRight;
         }
 
@@ -348,4 +377,13 @@ void Node::rotateRight() {
     }
 }
 
+void Node::incSize()
+{
+    size++;
+}
+
+void Node::recalcSize() {
+    this->size = (left ? left->size : 0) +
+            (right ? right->size + 1 : 0);
+}
 
